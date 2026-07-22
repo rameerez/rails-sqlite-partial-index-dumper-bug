@@ -30,6 +30,10 @@ reviewable:
 - The exact submitted [parser line](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb#L24)
   and [regression tests](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809)
   are immutable links into the submitted commit.
+- Every upstream check is green: the [Rails Buildkite suite](https://buildkite.com/rails/rails/builds/131320),
+  [Docker smoke test](https://github.com/rails/rails/actions/runs/29885637092),
+  [docs preview](https://buildkite.com/rails/docs-preview/builds/20921), and
+  [labeler](https://github.com/rails/rails/actions/runs/29885636090).
 
 The native tests were run without the fix first. They reproduced predicate
 loss, expression-index `NoMethodError`, and schema-dump table omission. With the
@@ -241,6 +245,8 @@ The native Rails patch was also proven red before green and passed the complete
 Active Record SQLite suite. Its [submitted tests](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809)
 exercise the public-API predicate, terminal-newline expression, combined
 multiline expression/predicate, literal whitespace, and full schema-dump paths.
+The exact local and hosted results are in
+[UPSTREAM_VALIDATION.md](UPSTREAM_VALIDATION.md).
 
 ## Prior art checked
 
@@ -274,6 +280,8 @@ Targeted issue/PR searches found no direct report of this newline trigger as of
   captures for Rails' existing single-line SQLite index corpus.
 - [`EVIDENCE.md`](EVIDENCE.md): full proof, corrections, causal chain, candidate
   design, and explicit boundaries.
+- [`UPSTREAM_VALIDATION.md`](UPSTREAM_VALIDATION.md): exact native Rails
+  red/green commands, outputs, full-suite result, and process traceability.
 - [`SOURCES.md`](SOURCES.md): immutable source ledger for every material claim.
 - [`ISSUE_DRAFT.md`](ISSUE_DRAFT.md): preserved source for the filed
   [upstream issue](https://github.com/rails/rails/issues/58200).

@@ -37,7 +37,7 @@ characterization, and primary-source ledger are in the public
 The same failure signature is confirmed on Active Record 7.1.6, 7.2.3.1,
 8.0.5, 8.1.3, and Rails main at `d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096`.
 Its independent verification matrix is
-[green](https://github.com/rameerez/rails-sqlite-partial-index-dumper-bug/actions/runs/29884224884).
+[green](https://github.com/rameerez/rails-sqlite-partial-index-dumper-bug/actions/runs/29885712858).
 
 Validation against Rails main:
 
@@ -51,6 +51,12 @@ RuboCop:                       3 files inspected, no offenses detected
 Before applying the parser change, the native tests reproduce both branches of
 the defect: the partial predicate is nil, expression-index introspection raises
 `NoMethodError`, and the schema dumper omits the affected table.
+
+All checks on the submitted Rails SHA are green: the
+[Rails Buildkite suite](https://buildkite.com/rails/rails/builds/131320),
+[`rails-new-docker`](https://github.com/rails/rails/actions/runs/29885637092),
+[docs preview](https://buildkite.com/rails/docs-preview/builds/20921), and
+[labeler](https://github.com/rails/rails/actions/runs/29885636090).
 
 Related work has different triggers or code paths: rails/rails#31603 and
 rails/rails#31607 addressed table recreation; rails/rails#53570 added support

@@ -16,6 +16,9 @@ which was also the tip of `rails/rails:main` when the evidence was regenerated.
 | The production change is one parser line. | [Submitted `schema_statements.rb`, line 24](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb#L24) |
 | Four native regressions cover multiline predicates, terminal newlines, expression indexes, literal whitespace, and schema dumping. | [Submitted `sqlite3_adapter_test.rb`, lines 732-809](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809) |
 | The changelog entry follows this checkout's explicit bug-fix instruction. | [Submitted `activerecord/CHANGELOG.md`, lines 1-3](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/CHANGELOG.md#L1-L3) · [Rails `AGENTS.md`, lines 128-134](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/AGENTS.md#L128-L134) |
+| Exact native red/green commands, seeds, outputs, and validation boundaries. | [Native Rails validation record](UPSTREAM_VALIDATION.md) |
+| All Rails-hosted checks passed on the submitted SHA. | [Rails Buildkite #131320](https://buildkite.com/rails/rails/builds/131320) · [`rails-new-docker` run 29885637092](https://github.com/rails/rails/actions/runs/29885637092) · [docs-preview #20921](https://buildkite.com/rails/docs-preview/builds/20921) · [labeler run 29885636090](https://github.com/rails/rails/actions/runs/29885636090) |
+| The public case-file matrix passed after issue/PR cross-linking. | [Verification run 29885712858](https://github.com/rameerez/rails-sqlite-partial-index-dumper-bug/actions/runs/29885712858) |
 
 ## Rails implementation and public contract
 

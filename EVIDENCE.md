@@ -59,6 +59,12 @@ The upstream line is pinned at
 - Exact native [parser change](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb#L24),
   [regression tests](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809),
   and [changelog entry](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/CHANGELOG.md#L1-L3)
+- Green hosted checks: [Rails Buildkite #131320](https://buildkite.com/rails/rails/builds/131320),
+  [`rails-new-docker` run 29885637092](https://github.com/rails/rails/actions/runs/29885637092),
+  [docs-preview #20921](https://buildkite.com/rails/docs-preview/builds/20921),
+  and [labeler run 29885636090](https://github.com/rails/rails/actions/runs/29885636090)
+- Green independent case-file matrix:
+  [Verification run 29885712858](https://github.com/rameerez/rails-sqlite-partial-index-dumper-bug/actions/runs/29885712858)
 
 The exact final native regressions were intentionally run against the original
 parser before the fix. They produced the nil-predicate failure, two expression
@@ -71,6 +77,9 @@ sqlite3_adapter_test.rb:    101 runs,   253 assertions, 0 failures, 0 errors
 Full Active Record SQLite: 9,643 runs, 32,864 assertions, 0 failures, 0 errors, 38 skips
 RuboCop:                       3 files inspected, no offenses detected
 ```
+
+The commands, seeds, failure mapping, and complete native validation boundary
+are preserved in [UPSTREAM_VALIDATION.md](UPSTREAM_VALIDATION.md).
 
 ## Released and edge version matrix
 
