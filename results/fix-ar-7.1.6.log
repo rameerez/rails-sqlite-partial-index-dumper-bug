@@ -1,0 +1,14 @@
+Fetching gem metadata from https://rubygems.org/........
+Resolving dependencies...
+Active Record version: 7.1.6 (candidate fix applied)
+sqlite3 gem version: 2.9.5
+SQLite library version: 3.53.2
+Run options: --seed 1
+
+# Running:
+
+..............
+
+Finished in 0.027990s, 500.1786 runs/s, 893.1761 assertions/s.
+
+14 runs, 25 assertions, 0 failures, 0 errors, 0 skips

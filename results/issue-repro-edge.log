@@ -1,0 +1,57 @@
+Fetching https://github.com/rails/rails.git
+Fetching gem metadata from https://rubygems.org/........
+Resolving dependencies...
+Active Record 8.2.0.alpha at d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096
+sqlite3 2.9.5; SQLite 3.53.2
+Run options: --seed 1
+
+# Running:
+
+FEE.F
+
+Finished in 0.045384s, 110.1710 runs/s, 132.2052 assertions/s.
+
+  1) Failure:
+SQLiteIndexNewlineBugTest#test_public_add_index_heredoc [issue_repro.rb:61]:
+Expected: "status = 'pending'"
+  Actual: nil
+
+  2) Error:
+SQLiteIndexNewlineBugTest#test_expression_index_introspection:
+NoMethodError: undefined method 'size' for nil
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb:66:in 'ActiveRecord::ConnectionAdapters::IndexDefinition#concise_options'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb:30:in 'ActiveRecord::ConnectionAdapters::IndexDefinition#initialize'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb:45:in 'Class#new'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb:45:in 'block in ActiveRecord::ConnectionAdapters::SQLite3::SchemaStatements#indexes'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/result.rb:137:in 'Array#each'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/result.rb:137:in 'ActiveRecord::Result#each'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb:9:in 'Enumerable#filter_map'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb:9:in 'ActiveRecord::ConnectionAdapters::SQLite3::SchemaStatements#indexes'
+    issue_repro.rb:111:in 'SQLiteIndexNewlineBugTest#index'
+    issue_repro.rb:89:in 'SQLiteIndexNewlineBugTest#test_expression_index_introspection'
+
+  3) Error:
+SQLiteIndexNewlineBugTest#test_schema_round_trip_semantics:
+ActiveRecord::RecordNotUnique: SQLite3::ConstraintException: UNIQUE constraint failed: join_requests.organization_id, join_requests.user_id
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/sqlite3/database_statements.rb:122:in 'SQLite3::Statement#step'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/sqlite3/database_statements.rb:122:in 'ActiveRecord::ConnectionAdapters::SQLite3::DatabaseStatements#perform_query'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract/database_statements.rb:633:in 'block (2 levels) in ActiveRecord::ConnectionAdapters::DatabaseStatements#execute_intent'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract_adapter.rb:1128:in 'block in ActiveRecord::ConnectionAdapters::AbstractAdapter#with_raw_connection'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activesupport/lib/active_support/concurrency/null_lock.rb:9:in 'ActiveSupport::Concurrency::NullLock#synchronize'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract_adapter.rb:1093:in 'ActiveRecord::ConnectionAdapters::AbstractAdapter#with_raw_connection'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract/database_statements.rb:630:in 'block in ActiveRecord::ConnectionAdapters::DatabaseStatements#execute_intent'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activesupport/lib/active_support/notifications/instrumenter.rb:86:in 'ActiveSupport::Notifications::Instrumenter#instrument'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract_adapter.rb:1266:in 'ActiveRecord::ConnectionAdapters::AbstractAdapter#log'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract/database_statements.rb:628:in 'ActiveRecord::ConnectionAdapters::DatabaseStatements#execute_intent'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/query_intent.rb:322:in 'ActiveRecord::ConnectionAdapters::QueryIntent#run_query!'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/query_intent.rb:172:in 'ActiveRecord::ConnectionAdapters::QueryIntent#execute!'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract/database_statements.rb:164:in 'ActiveRecord::ConnectionAdapters::DatabaseStatements#execute'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/abstract/query_cache.rb:25:in 'ActiveRecord::ConnectionAdapters::AbstractAdapter#execute'
+    /Users/javi/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/bundler/gems/rails-d9e67f6268fc/activerecord/lib/active_record/connection_adapters/sqlite3/database_statements.rb:56:in 'ActiveRecord::ConnectionAdapters::SQLite3::DatabaseStatements#execute'
+    issue_repro.rb:82:in 'SQLiteIndexNewlineBugTest#test_schema_round_trip_semantics'
+
+  4) Failure:
+SQLiteIndexNewlineBugTest#test_schema_dumper_keeps_expression_index_table [issue_repro.rb:104]:
+Expected "# This file is auto-generated from the current state of the database. Instead\n# of editing this file, please use the migrations feature of Active Record to\n# incrementally modify your database, and then regenerate this schema definition.\n#\n# This file is the source Rails uses to define your schema when running `bin/rails\n# db:schema:load`. When creating a new database, `bin/rails db:schema:load` tends to\n# be faster and is potentially less error prone than running all of your\n# migrations from scratch. Old migrations may fail to apply correctly if those\n# migrations use external dependencies or application code.\n#\n# It's strongly recommended that you check this file into your version control system.\n\nActiveRecord::Schema[8.2].define(version: 0) do\n# Could not dump table \"join_requests\" because of following NoMethodError\n#   undefined method 'size' for nil\n\nend\n" to include "create_table \"join_requests\"".
+
+5 runs, 6 assertions, 2 failures, 2 errors, 0 skips

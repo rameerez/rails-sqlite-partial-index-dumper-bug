@@ -1,0 +1,7 @@
+partial index with comment: {expressions: "\"id\"", where: "number > 0"}
+expression: {expressions: "max(id, number)", where: nil}
+expression with trailing comment: {expressions: "number % 10", where: nil}
+expression with where: {expressions: "id % 10, max(id, number)", where: "id > 1000"}
+nested expression with adjacent WHERE: {expressions: "id % 10, (CASE WHEN number > 0 THEN max(id, number) END)", where: "(id > 1000)"}
+mixed column and expression: {expressions: "id, max(id, number)", where: nil}
+Candidate captures match the current parser for all 6 single-line corpus cases.

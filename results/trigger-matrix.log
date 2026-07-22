@@ -1,0 +1,20 @@
+Fetching gem metadata from https://rubygems.org/........
+Resolving dependencies...
+Active Record 8.1.3; sqlite3 gem 2.9.5; SQLite 3.53.2
+case | stored prefix/suffix bytes | Rails where
+--- | --- | ---
+single line | 67,82,103,39 | "status = 'pending'"
+leading LF | 67,82,103,39 | "status = 'pending'"
+LF before ON | 67,82,103,39 | "status = 'pending'"
+LF before WHERE | 67,82,103,39 | "status = 'pending'"
+LF inside columns | 67,82,103,39 | nil
+LF inside predicate | 67,82,103,39 | nil
+one terminal LF | 67,82,39,10 | nil
+two terminal LFs | 67,82,10,10 | nil
+terminal CRLF | 67,82,13,10 | nil
+one terminal space | 67,82,39,32 | "status = 'pending' "
+terminal tab | 67,82,39,9 | "status = 'pending'\t"
+terminal CR | 67,82,39,13 | "status = 'pending'\r"
+semicolon | 67,82,103,39 | "status = 'pending'"
+semicolon plus LF | 67,82,103,39 | "status = 'pending'"
+Characterization matrix matched all 14 expected results.

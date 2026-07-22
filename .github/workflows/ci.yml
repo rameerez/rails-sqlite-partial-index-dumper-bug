@@ -1,0 +1,75 @@
+name: Verification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    name: Ruby syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.2
+      - run: ruby -c repro.rb && ruby -c issue_repro.rb && ruby -c fix_validation.rb && ruby -c script/verify_bug.rb && ruby -c script/capture_results.rb && ruby -c script/trigger_matrix.rb && ruby -c script/sqlite_storage_probe.rb && ruby -c script/parser_comparison.rb
+      - run: ruby script/parser_comparison.rb
+
+  behavior:
+    name: Active Record ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - 7.1.6
+          - 7.2.3.1
+          - 8.0.5
+          - 8.1.3
+          - edge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.2
+      - name: Verify upstream failure signature
+        shell: bash
+        run: |
+          if [[ "${{ matrix.target }}" == "edge" ]]; then
+            AR_SOURCE=edge SQLITE3_VERSION=2.9.5 ruby script/verify_bug.rb
+          else
+            AR_VERSION="${{ matrix.target }}" SQLITE3_VERSION=2.9.5 ruby script/verify_bug.rb
+          fi
+      - name: Verify candidate fix
+        shell: bash
+        run: |
+          if [[ "${{ matrix.target }}" == "edge" ]]; then
+            AR_SOURCE=edge SQLITE3_VERSION=2.9.5 ruby fix_validation.rb --seed 1
+          else
+            AR_VERSION="${{ matrix.target }}" SQLITE3_VERSION=2.9.5 ruby fix_validation.rb --seed 1
+          fi
+
+  sqlite-storage:
+    name: sqlite3 ${{ matrix.sqlite3 }} storage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        sqlite3:
+          - 1.7.3
+          - 2.5.0
+          - 2.9.5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.2
+      - run: SQLITE3_VERSION="${{ matrix.sqlite3 }}" ruby script/sqlite_storage_probe.rb

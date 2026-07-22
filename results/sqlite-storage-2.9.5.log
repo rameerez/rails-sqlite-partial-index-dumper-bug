@@ -1,0 +1,7 @@
+Fetching gem metadata from https://rubygems.org/.....
+Resolving dependencies...
+sqlite3 gem version: 2.9.5
+SQLite library version: 3.53.2
+input equals stored SQL: true
+stored terminal bytes: [110, 103, 39, 10]
+PRAGMA partial flag: 1

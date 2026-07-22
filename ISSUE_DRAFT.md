@@ -1,12 +1,24 @@
-# SQLite3: partial-index WHERE clause silently dropped from schema.rb (and `indexes` crashes for expression indexes) when CREATE INDEX SQL is multi-line
+# SQLite3: newline in stored index SQL drops partial WHERE or omits expression-index table from schema.rb
 
-<!-- Title above; body below. Re-verify AR_SOURCE=edge before filing. -->
+<!--
+Draft only. Do not file until we decide whether to open the fix PR alongside it.
+Before filing, rerun `AR_SOURCE=edge ruby issue_repro.rb`, update the pinned main
+SHA/output if it moved, and replace this comment with any linked PR number.
+-->
 
 ### Steps to reproduce
 
-SQLite stores `CREATE INDEX` statements verbatim in `sqlite_master`. `SQLite3::SchemaStatements#indexes` recovers the `WHERE` clause of a partial index by parsing that stored SQL with a regex that has no `/m` flag and an absolute `\z` anchor — so it fails on any newline, including a **single trailing `"\n"`**. Every partial index created via a heredoc migration (`execute <<~SQL … SQL`) is affected.
+A terminal newline in SQLite's stored `CREATE INDEX` SQL makes
+`SQLite3::SchemaStatements#indexes` lose a partial predicate. This can be
+triggered through the documented public `add_index(..., where:)` API by supplying
+the predicate as a Ruby heredoc; it does not require raw SQL.
 
-Executable test case (bug-report-template style — the tests assert correct behavior, failures demonstrate the bug):
+The compact executable case below follows the Active Record bug-report-template
+style. Its tests assert expected behavior, so the current bug produces intentional
+failures/errors.
+
+<details>
+<summary>Executable test case</summary>
 
 ```ruby
 # frozen_string_literal: true
@@ -16,133 +28,240 @@ require "bundler/inline"
 gemfile(true) do
   source "https://rubygems.org"
   gem "rails", github: "rails/rails", branch: "main"
-  gem "sqlite3"
+  gem "sqlite3", "2.9.5"
 end
 
 require "active_record"
 require "minitest/autorun"
+require "open3"
 require "stringio"
 
 ActiveRecord::Base.logger = nil
 
-class BugTest < Minitest::Test
+rails_root = File.expand_path("..", Gem.loaded_specs.fetch("activerecord").full_gem_path)
+revision, status = Open3.capture2("git", "-C", rails_root, "rev-parse", "HEAD")
+puts "Active Record #{ActiveRecord::VERSION::STRING} at #{revision.strip}" if status.success?
+puts "sqlite3 #{Gem.loaded_specs.fetch('sqlite3').version}; SQLite #{SQLite3::SQLITE_VERSION}"
+
+class SQLiteIndexNewlineBugTest < Minitest::Test
+  WHERE = "status = 'pending'"
+  REJECTED = "INSERT INTO join_requests (organization_id, user_id, status) VALUES (1, 1, 'rejected')"
+  PENDING = "INSERT INTO join_requests (organization_id, user_id, status) VALUES (1, 1, 'pending')"
+
   def setup
     ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
-    @conn = ActiveRecord::Base.lease_connection
-    @conn.create_table :join_requests, force: true do |t|
-      t.integer :organization_id, null: false
-      t.integer :user_id, null: false
-      t.string :status, null: false, default: "pending"
+    @connection = ActiveRecord::Base.lease_connection
+    @connection.create_table(:join_requests) do |table|
+      table.integer :organization_id, null: false
+      table.integer :user_id, null: false
+      table.string :status, null: false
     end
   end
 
-  # Control — the only formatting the parser accepts. PASSES.
-  def test_control_single_line_where_is_preserved
-    @conn.execute "CREATE UNIQUE INDEX idx_pending ON join_requests (organization_id, user_id) WHERE status = 'pending'"
-    assert_equal "status = 'pending'", index("idx_pending").where
+  def test_control
+    @connection.add_index :join_requests, [:organization_id, :user_id],
+      name: :idx_pending, unique: true, where: WHERE
+
+    assert_equal WHERE, index("idx_pending").where
   end
 
-  # Minimal trigger: ONE trailing newline. FAILS (where comes back nil).
-  def test_trailing_newline_where_is_preserved
-    @conn.execute "CREATE UNIQUE INDEX idx_pending ON join_requests (organization_id, user_id) WHERE status = 'pending'\n"
-    assert_equal "status = 'pending'", index("idx_pending").where
+  def test_public_add_index_heredoc
+    @connection.add_index :join_requests, [:organization_id, :user_id],
+      name: :idx_pending, unique: true, where: <<~SQL
+        status = 'pending'
+      SQL
+
+    metadata = @connection.select_all('PRAGMA index_list("join_requests")').find do |row|
+      row["name"] == "idx_pending"
+    end
+    stored_sql = @connection.select_value("SELECT sql FROM sqlite_master WHERE name = 'idx_pending'")
+
+    assert_equal 1, metadata.fetch("partial")
+    assert stored_sql.end_with?("\n")
+    assert_equal WHERE, index("idx_pending").where
   end
 
-  # Real-world shape: heredoc migration. FAILS (where nil).
-  def test_heredoc_where_is_preserved
-    @conn.execute <<~SQL
-      CREATE UNIQUE INDEX idx_pending
-      ON join_requests (organization_id, user_id)
-      WHERE status = 'pending'
-    SQL
-    assert_equal "status = 'pending'", index("idx_pending").where
-  end
+  def test_schema_round_trip_semantics
+    @connection.add_index :join_requests, [:organization_id, :user_id],
+      name: :idx_pending, unique: true, where: <<~SQL
+        status = 'pending'
+      SQL
+    @connection.execute REJECTED
+    @connection.execute PENDING
 
-  # The data-integrity payload: schema.rb round-trip. FAILS with
-  # ActiveRecord::RecordNotUnique — the reloaded index is a FULL unique.
-  def test_schema_roundtrip_preserves_partial_index_semantics
-    @conn.execute <<~SQL
-      CREATE UNIQUE INDEX idx_pending
-      ON join_requests (organization_id, user_id)
-      WHERE status = 'pending'
-    SQL
-
-    # The MIGRATED database honors partial-index semantics:
-    @conn.execute "INSERT INTO join_requests (organization_id, user_id, status) VALUES (1, 1, 'rejected')"
-    @conn.execute "INSERT INTO join_requests (organization_id, user_id, status) VALUES (1, 1, 'pending')"
-
-    io = StringIO.new
-    ActiveRecord::SchemaDumper.dump(ActiveRecord::Base.connection_pool, io)
+    schema = StringIO.new.tap do |stream|
+      ActiveRecord::SchemaDumper.dump(ActiveRecord::Base.connection_pool, stream)
+    end.string
 
     ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
     ActiveRecord::Schema.verbose = false
-    eval(io.string.gsub(/version: [\d_.]+/, "version: 0"))
-
+    eval(schema.gsub(/version: [\d_.]+/, "version: 0"))
     fresh = ActiveRecord::Base.lease_connection
-    fresh.execute "INSERT INTO join_requests (organization_id, user_id, status) VALUES (1, 1, 'rejected')"
-    # MUST succeed (previous row is not 'pending') — raises RecordNotUnique under the bug:
-    fresh.execute "INSERT INTO join_requests (organization_id, user_id, status) VALUES (1, 1, 'pending')"
 
-    assert_equal "status = 'pending'", fresh.indexes(:join_requests).find { |i| i.name == "idx_pending" }.where
+    fresh.execute REJECTED
+    fresh.execute PENDING
   end
 
-  # Second symptom: for EXPRESSION indexes the parse failure isn't silent —
-  # PRAGMA index_info yields nil column names, the code falls back to the
-  # regex's (also nil) expressions capture, and IndexDefinition#initialize
-  # crashes in concise_options (`columns.size` on nil). So even
-  # `db:schema:dump` raises. FAILS with NoMethodError.
-  def test_multiline_expression_index_keeps_its_expression
-    @conn.add_column :join_requests, :email, :string
-    @conn.execute <<~SQL
+  def test_expression_index_introspection
+    @connection.add_column :join_requests, :email, :string
+    @connection.execute "CREATE INDEX idx_email ON join_requests (LOWER(email))\n"
+
+    assert_equal "LOWER(email)", index("idx_email").columns
+  end
+
+  def test_schema_dumper_keeps_expression_index_table
+    @connection.add_column :join_requests, :email, :string
+    @connection.execute <<~SQL
       CREATE UNIQUE INDEX idx_email
       ON join_requests (organization_id, LOWER(email))
       WHERE status = 'pending'
     SQL
 
-    idx = index("idx_email")
-    assert_equal "organization_id, LOWER(email)", idx.columns
-    assert_equal "status = 'pending'", idx.where
+    schema = StringIO.new.tap do |stream|
+      ActiveRecord::SchemaDumper.dump(ActiveRecord::Base.connection_pool, stream)
+    end.string
+
+    assert_includes schema, 'create_table "join_requests"'
+    refute_includes schema, "Could not dump table"
   end
 
   private
 
   def index(name)
-    @conn.indexes(:join_requests).find { |i| i.name == name } || flunk("index #{name} not returned at all")
+    @connection.indexes(:join_requests).find { |candidate| candidate.name == name }
   end
 end
 ```
 
+</details>
+
+The same file is available as
+[`issue_repro.rb`](https://github.com/rameerez/rails-sqlite-partial-index-dumper-bug/blob/main/issue_repro.rb).
+
+On main commit
+[`d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096`](https://github.com/rails/rails/commit/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096),
+the summary is:
+
+```text
+5 runs, 6 assertions, 2 failures, 2 errors, 0 skips
+```
+
+The two SQLite assertions inside `test_public_add_index_heredoc` pass first:
+SQLite reports `partial=1`, and the stored SQL ends in LF. The next assertion
+fails because Rails returns `where=nil`.
+
 ### Expected behavior
 
-`connection.indexes` returns the index with `where: "status = 'pending'"` regardless of how the `CREATE INDEX` statement was formatted, schema.rb round-trips partial indexes faithfully, and expression indexes never crash introspection.
+- `connection.indexes` returns `where: "status = 'pending'"` independent of
+  harmless CREATE INDEX line formatting.
+- Dumping and loading `schema.rb` preserves the partial unique constraint's
+  semantics.
+- Expression indexes remain introspectable.
+- The schema dumper retains the affected table.
+
+These expectations follow Rails' existing contracts:
+
+- Rails [documents partial indexes for PostgreSQL and
+  SQLite](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/lib/active_record/connection_adapters/abstract/schema_statements.rb#L909-L917).
+- The SQLite adapter [reports partial- and expression-index
+  support](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/lib/active_record/connection_adapters/sqlite3_adapter.rb#L209-L214).
+- The generic schema-dumper test [expects `where:` whenever the adapter reports
+  support](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/test/cases/schema_dumper_test.rb#L250-L257).
 
 ### Actual behavior
 
-- `where` comes back **nil** whenever the stored SQL contains a newline — the schema dumper then emits the index **without `where:`**, i.e. as a **full unique index**. Because the columns are recovered separately via `PRAGMA index_info`, nothing errors: every database provisioned from that schema.rb (all Rails test databases, any `db:schema:load` bootstrap) silently enforces a *stricter* constraint than the migrated database. In the app where we found this, "one *pending* join request per user" became "one join request per user *ever*" in schema-loaded databases — inserts that production accepts raise `ActiveRecord::RecordNotUnique` in test.
-- For **expression** indexes with multi-line SQL, `connection.indexes` (and therefore `db:schema:dump`) raises `NoMethodError: undefined method 'size' for nil` from `IndexDefinition#concise_options` — the `expressions` capture of the same failed regex is the columns fallback.
+There are two related outcomes from the same failed regex match.
 
-Root cause — `activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb` (`#indexes`):
+For ordinary partial unique indexes, columns still come from
+`PRAGMA index_info`, but `where` is nil. The Ruby schema therefore emits a full
+unique index. The migrated database accepts a rejected row and a pending row for
+one key; a fresh database loaded from the dump raises
+`ActiveRecord::RecordNotUnique` for the same pair.
+
+For expression indexes, SQLite returns a NULL name for the expression entry in
+`PRAGMA index_info`. Rails substitutes the failed regex's nil `expressions`
+capture, and `IndexDefinition#concise_options` calls `columns.size`. Direct
+`connection.indexes` therefore raises `NoMethodError: undefined method 'size'
+for nil`. `SchemaDumper` catches that error at table scope, writes a `Could not
+dump table` comment, omits the whole table, and returns normally.
+
+Exact implementation links:
+
+- [`SQLite3::SchemaStatements#indexes`, lines 7-52](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb#L7-L52)
+- [`IndexDefinition#concise_options`, lines 64-71](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L64-L71)
+- [`SchemaDumper` table-scope rescue, lines 225-248](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/lib/active_record/schema_dumper.rb#L225-L248)
+- [SQLite `PRAGMA index_info` output contract](https://www.sqlite.org/pragma.html#pragma_index_info)
+
+### Root cause
+
+The current parser is:
 
 ```ruby
 /\bON\b\s*"?(\w+?)"?\s*\((?<expressions>.+?)\)(?:\s*WHERE\b\s*(?<where>.+))?(?:\s*\/\*.*\*\/)?\z/i =~ index_sql
 ```
 
-No `/m` (so `.` can't cross a newline) + absolute `\z` (so not even a trailing newline may follow the clause), applied to `sqlite_master.sql`, which is the *verbatim* original statement. The overall match fails, both named captures are nil.
+It has no `/m`, so dot cannot cross LF, and it ends in absolute `\z`, so a
+terminal LF prevents the whole match. Ruby documents [dot's `/m`
+behavior](https://docs.ruby-lang.org/en/3.4/Regexp.html#class-Regexp-label-Shorthand+Character+Classes),
+[`\Z` versus `\z`](https://docs.ruby-lang.org/en/3.4/Regexp.html#class-Regexp-label-Boundary+Anchors),
+and that [heredocs include their ending
+newline](https://docs.ruby-lang.org/en/3.4/syntax/literals_rdoc.html#label-Here+Document+Literals).
 
-A possible fix — tolerate surrounding/internal newlines while keeping them out of the capture:
+Rails passes the public API predicate into generated SQL without stripping it:
+[`add_index_options`, lines 1601-1623](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/lib/active_record/connection_adapters/abstract/schema_statements.rb#L1601-L1623)
+and
+[`visit_CreateIndexDefinition`, lines 106-123](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/lib/active_record/connection_adapters/abstract/schema_creation.rb#L106-L123).
+
+SQLite documents that `sqlite_schema.sql` is a copy of the original CREATE text
+subject to specified normalization—not arbitrary whitespace canonicalization:
+[schema-table documentation](https://www.sqlite.org/schematab.html#interpretation_of_the_schema_table).
+For this input, direct probes with sqlite3 gems 1.7.3, 2.5.0, and 2.9.5 all
+preserve the terminal LF exactly.
+
+The trigger is narrower than “any newline”: newlines consumed by an existing
+`\s*` can work. Terminal LF/CRLF and newlines inside `expressions` or `where`
+fail. A complete characterization is in the public
+[evidence report](https://github.com/rameerez/rails-sqlite-partial-index-dumper-bug/blob/main/EVIDENCE.md#trigger-characterization).
+
+### Candidate fix
+
+This candidate passes 14 positive and regression cases across Active Record
+7.1.6, 7.2.3.1, 8.0.5, 8.1.3, and the pinned main revision:
 
 ```ruby
 /\bON\b\s*"?(\w+?)"?\s*\((?<expressions>.+?)\)(?:\s*WHERE\b\s*(?<where>.+?))?(?:\s*\/\*.*\*\/)?\s*\z/im
 ```
 
-(add `/m`, make the `where` capture lazy, anchor with `\s*\z`). I've validated this candidate against the test case above with `#indexes` monkey-patched: all tests pass, including a regression guard for WHERE clauses containing multi-space string literals (`WHERE note = 'two  spaces'` — the reason a whitespace-collapsing normalization would be wrong). Happy to send the PR with regression tests if the approach sounds right.
+It adds `/m`, makes the predicate lazy so terminal whitespace remains outside
+the capture, and permits whitespace before `\z`. The validator intentionally
+does not `squish` the full SQL because Rails' [implementation collapses internal
+whitespace](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activesupport/lib/active_support/core_ext/string/filters.rb#L3-L26),
+which could change `WHERE note = 'two  spaces'`. That literal is a regression
+test.
 
-Related, for context: #55627 (same regex, different trigger — unconventional table names; closed stale) and #31603 (partial index lost through the `alter_table` recreation path; different code).
+Candidate code, CI matrix, raw logs, and the complete source ledger are at
+https://github.com/rameerez/rails-sqlite-partial-index-dumper-bug.
 
-PostgreSQL/MySQL are unaffected — their servers return normalized/structured index definitions; only SQLite round-trips the user's raw SQL text.
+### Related work
+
+- #31603 / #31607: same broad symptom, different table-recreation path; fixed.
+- #53570: merged change to this parser for trailing comments.
+- #55627: same regex, different unconventional-table-name trigger; closed stale
+  without a fix.
+- #58136: current multiline SQLite work in other parsers; it does not touch
+  index introspection.
+
+Targeted issue/PR searches found no direct report of this newline trigger as of
+2026-07-22.
 
 ### System configuration
 
-**Rails version**: reproduced on 7.1.6, 7.2.3.1, 8.0.5, 8.1.3, and main (8.2.0.alpha) — identical failure signature on all five.
+**Rails version**: 8.2.0.alpha at
+`d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096`; also reproduced on 7.1.6,
+7.2.3.1, 8.0.5, and 8.1.3
 
-**Ruby version**: 3.4.x
+**Ruby version**: 3.4.2
+
+**sqlite3 gem**: 2.9.5
+
+**SQLite library**: 3.53.2 on the audit machine; CI may use the platform build

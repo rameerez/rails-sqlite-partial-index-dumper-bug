@@ -1,0 +1,16 @@
+Fetching https://github.com/rails/rails.git
+Fetching gem metadata from https://rubygems.org/........
+Resolving dependencies...
+Active Record version: 8.2.0.alpha (candidate fix applied)
+sqlite3 gem version: 2.9.5
+SQLite library version: 3.53.2
+Rails source commit: d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096
+Run options: --seed 1
+
+# Running:
+
+..............
+
+Finished in 0.040710s, 343.8958 runs/s, 614.0997 assertions/s.
+
+14 runs, 25 assertions, 0 failures, 0 errors, 0 skips
