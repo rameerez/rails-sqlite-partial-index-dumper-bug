@@ -1,0 +1,12 @@
+Fetching gem metadata from https://rubygems.org/........
+Resolving dependencies...
+Active Record version: 8.1.3 (PATCHED #indexes)
+Run options: --seed 17357
+
+# Running:
+
+......
+
+Finished in 0.040191s, 149.2872 runs/s, 174.1683 assertions/s.
+
+6 runs, 7 assertions, 0 failures, 0 errors, 0 skips
