@@ -48,6 +48,30 @@ The upstream line is pinned at
 /\bON\b\s*"?(\w+?)"?\s*\((?<expressions>.+?)\)(?:\s*WHERE\b\s*(?<where>.+))?(?:\s*\/\*.*\*\/)?\z/i =~ index_sql
 ```
 
+## Filed upstream contribution
+
+- Bug report:
+  [rails/rails#58200](https://github.com/rails/rails/issues/58200)
+- Fix pull request:
+  [rails/rails#58201](https://github.com/rails/rails/pull/58201)
+- Submitted commit:
+  [`a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb`](https://github.com/rails/rails/pull/58201/commits/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb)
+- Exact native [parser change](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb#L24),
+  [regression tests](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809),
+  and [changelog entry](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/CHANGELOG.md#L1-L3)
+
+The exact final native regressions were intentionally run against the original
+parser before the fix. They produced the nil-predicate failure, two expression
+introspection errors, and schema-dump table omission: `4 runs, 4 assertions, 2
+failures, 2 errors`. With the fix restored:
+
+```text
+Focused regressions:          4 runs,    11 assertions, 0 failures, 0 errors
+sqlite3_adapter_test.rb:    101 runs,   253 assertions, 0 failures, 0 errors
+Full Active Record SQLite: 9,643 runs, 32,864 assertions, 0 failures, 0 errors, 38 skips
+RuboCop:                       3 files inspected, no offenses detected
+```
+
 ## Released and edge version matrix
 
 `repro.rb` asserts correct behavior, so its expected result while the bug is
@@ -172,7 +196,7 @@ and retained byte `10` at the end:
 Run [`script/sqlite_storage_probe.rb`](script/sqlite_storage_probe.rb) with
 `SQLITE3_VERSION` to reproduce. Raw logs are in `results/sqlite-storage-*.log`.
 
-## Candidate fix and why it has this exact shape
+## Fix design and why it has this exact shape
 
 The validated candidate changes only the parser regex:
 
@@ -206,7 +230,7 @@ The validated candidate changes only the parser regex:
 | `index_sql.squish` or `gsub(/\s+/, " ")` | Can alter SQL literal contents and therefore the predicate's meaning. |
 | `where&.strip` only | Runs after matching and cannot repair a complete-match failure. |
 
-## Candidate validation coverage
+## Standalone and native validation coverage
 
 [`fix_validation.rb`](fix_validation.rb) prepends a copied `#indexes` method
 with the candidate regex and covers all of these cases on every version in the
@@ -238,6 +262,12 @@ The validator contains query-method compatibility glue only because Rails main
 renamed the internal query path used by released versions. That glue is test
 harness code, not part of the proposed upstream change.
 
+The upstream patch adds four native Minitest cases in
+[`sqlite3_adapter_test.rb`](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809).
+Together they cover every part of the one-line production change, including the
+schema-dumper rescue boundary. The entire Active Record SQLite suite passed
+locally after those cases were added.
+
 ## Why this satisfies the upstream-bug burden
 
 - It reproduces through a documented Rails public API, not only arbitrary raw
@@ -265,11 +295,10 @@ harness code, not part of the proposed upstream change.
 - `structure.sql` is a viable application workaround, but partial indexes are
   already a supported `schema.rb` feature, and the same predicate dumps correctly
   without the triggering formatting.
-- The full Rails development suite has not been run in this standalone repo.
-  Before an upstream PR is submitted, the candidate must be converted into the
-  native Rails diff and regression tests and run through the targeted Active
-  Record SQLite suite. This repo's CI validates standalone release/edge behavior,
-  not the entire Rails checkout.
+- This repository's CI validates standalone release/edge behavior. Separately,
+  the native patch passed the complete Active Record SQLite suite locally; the
+  Rails pull request's hosted cross-platform checks are the authoritative wider
+  integration result.
 - The existing parser has other known grammar limitations, notably
   [#55627](https://github.com/rails/rails/issues/55627). The candidate is a scoped
   newline fix, not a claim that regex parsing of arbitrary SQLite index SQL is

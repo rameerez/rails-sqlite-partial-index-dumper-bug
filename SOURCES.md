@@ -6,6 +6,17 @@ or release-tag permalinks. The edge revision audited on 2026-07-22 is
 [`d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096`](https://github.com/rails/rails/commit/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096),
 which was also the tip of `rails/rails:main` when the evidence was regenerated.
 
+## Filed upstream contribution
+
+| Artifact or decision | Exact source |
+|---|---|
+| Canonical upstream bug report. | [rails/rails#58200](https://github.com/rails/rails/issues/58200) |
+| Canonical upstream fix pull request. | [rails/rails#58201](https://github.com/rails/rails/pull/58201) |
+| Submitted commit based on the audited Rails revision. | [`a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb`](https://github.com/rails/rails/pull/58201/commits/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb) |
+| The production change is one parser line. | [Submitted `schema_statements.rb`, line 24](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb#L24) |
+| Four native regressions cover multiline predicates, terminal newlines, expression indexes, literal whitespace, and schema dumping. | [Submitted `sqlite3_adapter_test.rb`, lines 732-809](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809) |
+| The changelog entry follows this checkout's explicit bug-fix instruction. | [Submitted `activerecord/CHANGELOG.md`, lines 1-3](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/CHANGELOG.md#L1-L3) · [Rails `AGENTS.md`, lines 128-134](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/AGENTS.md#L128-L134) |
+
 ## Rails implementation and public contract
 
 | Claim or decision | Exact source |
@@ -92,9 +103,16 @@ asserts input equality, terminal LF, and `partial=1` with sqlite3 gems 1.7.3,
 - Rails asks for an executable failing test and provides an Active Record
   template: [contribution guide, lines 23-54](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/guides/source/contributing_to_ruby_on_rails.md#L23-L54)
   and the pinned [Active Record template](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/guides/bug_report_templates/active_record.rb).
-- Rails requires tests that fail before and pass after a code change, and says a
-  bug fix does not require a changelog entry: [lines 275-283](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/guides/source/contributing_to_ruby_on_rails.md#L275-L283)
+- Rails requires tests that fail before and pass after a code change:
+  [contribution guide, lines 275-283](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/guides/source/contributing_to_ruby_on_rails.md#L275-L283).
+- The general guide says a bug-fix changelog is unnecessary and minor fixes
+  generally should not get one: [lines 275-283](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/guides/source/contributing_to_ruby_on_rails.md#L275-L283)
   and [lines 614-620](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/guides/source/contributing_to_ruby_on_rails.md#L614-L620).
+  The checkout-specific `AGENTS.md` explicitly says to add one when fixing bugs,
+  so the submitted patch follows that more specific repository instruction:
+  [`AGENTS.md`, lines 128-134](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/AGENTS.md#L128-L134).
+- The PR is ready for review rather than a draft and follows the required body
+  sections and checklist: [Rails PR template, lines 1-45](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/.github/pull_request_template.md#L1-L45).
 - Rails explicitly distinguishes ordinary public bug reports from security
   reports: [contribution guide, lines 23-34 and 56-58](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/guides/source/contributing_to_ruby_on_rails.md#L23-L58).
   This repository concerns deterministic schema correctness from an

@@ -1,9 +1,9 @@
 # SQLite3: newline in stored index SQL drops partial WHERE or omits expression-index table from schema.rb
 
 <!--
-Draft only. Do not file until we decide whether to open the fix PR alongside it.
-Before filing, rerun `AR_SOURCE=edge ruby issue_repro.rb`, update the pinned main
-SHA/output if it moved, and replace this comment with any linked PR number.
+Filed as https://github.com/rails/rails/issues/58200 on 2026-07-22.
+The native fix is https://github.com/rails/rails/pull/58201.
+This file preserves the submitted issue source for reproducibility.
 -->
 
 ### Steps to reproduce

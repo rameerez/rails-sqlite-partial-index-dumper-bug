@@ -10,8 +10,37 @@ the entire table.
 
 Status: **confirmed on Active Record 7.1.6, 7.2.3.1, 8.0.5, 8.1.3, and Rails
 main at [`d9e67f6`](https://github.com/rails/rails/commit/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096).**
-This is an ordinary correctness bug, not a security vulnerability. No upstream
-issue or PR has been filed from this repository yet.
+This is an ordinary correctness bug, not a security vulnerability. It is filed
+upstream as [rails/rails#58200](https://github.com/rails/rails/issues/58200),
+with the tested fix in
+[rails/rails#58201](https://github.com/rails/rails/pull/58201).
+
+## Upstream issue and native fix
+
+The upstream artifacts are deliberately cross-linked and independently
+reviewable:
+
+- [Issue #58200](https://github.com/rails/rails/issues/58200) contains the
+  compact executable reproduction and exact causal chain.
+- [Pull request #58201](https://github.com/rails/rails/pull/58201) contains the
+  one-line adapter fix, four native Minitest regressions, and the Active Record
+  changelog entry.
+- [Commit `a4f3c229b8`](https://github.com/rails/rails/pull/58201/commits/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb)
+  is based on the same pinned Rails revision used by this audit.
+- The exact submitted [parser line](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/lib/active_record/connection_adapters/sqlite3/schema_statements.rb#L24)
+  and [regression tests](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809)
+  are immutable links into the submitted commit.
+
+The native tests were run without the fix first. They reproduced predicate
+loss, expression-index `NoMethodError`, and schema-dump table omission. With the
+fix applied, validation on Ruby 3.4.2 and sqlite3 2.9.5 produced:
+
+```text
+Focused regressions:          4 runs,    11 assertions, 0 failures, 0 errors
+sqlite3_adapter_test.rb:    101 runs,   253 assertions, 0 failures, 0 errors
+Full Active Record SQLite: 9,643 runs, 32,864 assertions, 0 failures, 0 errors, 38 skips
+RuboCop:                       3 files inspected, no offenses detected
+```
 
 ## The shortest convincing proof
 
@@ -186,9 +215,10 @@ Using `structure.sql` is an application workaround, not a rebuttal: partial
 indexes are already representable by `schema.rb`, and the dumper handles the
 same index correctly when formatting avoids the parser defect.
 
-## Validated candidate fix
+## Implemented and validated fix
 
-The narrow candidate is:
+The narrow fix submitted in
+[rails/rails#58201](https://github.com/rails/rails/pull/58201) is:
 
 ```ruby
 /\bON\b\s*"?(\w+?)"?\s*\((?<expressions>.+?)\)(?:\s*WHERE\b\s*(?<where>.+?))?(?:\s*\/\*.*\*\/)?\s*\z/im
@@ -197,7 +227,8 @@ The narrow candidate is:
 It adds `/m`, makes the predicate lazy, and consumes final whitespace outside
 the capture. [`fix_validation.rb`](fix_validation.rb) applies that regex to a
 copy of `#indexes` and passes all 14 positive/regression cases across the entire
-release/edge matrix.
+release/edge matrix. The upstream commit applies the same change directly to
+the adapter and adds native coverage beside Rails' existing SQLite index tests.
 
 It intentionally does not normalize the whole SQL with `squish` or
 `gsub(/\s+/, " ")`. Rails' [`String#squish`
@@ -206,11 +237,10 @@ collapses internal whitespace, which can change a predicate such as
 `WHERE note = 'two  spaces'`. The validator has an exact regression guard for
 that case.
 
-This is candidate validation, not yet a Rails patch. The eventual upstream PR
-must translate it into the native adapter diff, add regression tests beside the
-existing [SQLite index
-tests](https://github.com/rails/rails/blob/d9e67f6268fc6793ecc7bbfa6c71e145a6dc8096/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L723-L773),
-and run the targeted Rails test suite.
+The native Rails patch was also proven red before green and passed the complete
+Active Record SQLite suite. Its [submitted tests](https://github.com/rameerez/rails/blob/a4f3c229b864c6ebbe7e2c03d3a85482ef23c9eb/activerecord/test/cases/adapters/sqlite3/sqlite3_adapter_test.rb#L732-L809)
+exercise the public-API predicate, terminal-newline expression, combined
+multiline expression/predicate, literal whitespace, and full schema-dump paths.
 
 ## Prior art checked
 
@@ -245,8 +275,10 @@ Targeted issue/PR searches found no direct report of this newline trigger as of
 - [`EVIDENCE.md`](EVIDENCE.md): full proof, corrections, causal chain, candidate
   design, and explicit boundaries.
 - [`SOURCES.md`](SOURCES.md): immutable source ledger for every material claim.
-- [`ISSUE_DRAFT.md`](ISSUE_DRAFT.md): accurate upstream issue draft, deliberately
-  not filed yet.
+- [`ISSUE_DRAFT.md`](ISSUE_DRAFT.md): preserved source for the filed
+  [upstream issue](https://github.com/rails/rails/issues/58200).
+- [`PR_DRAFT.md`](PR_DRAFT.md): preserved source for the filed
+  [upstream fix](https://github.com/rails/rails/pull/58201).
 - [`results/`](results): deterministic raw logs for releases, edge, candidate
   validation, trigger mapping, and storage probes.
 - [`.github/workflows/ci.yml`](.github/workflows/ci.yml): public CI matrix.
